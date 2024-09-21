@@ -1,0 +1,231 @@
+<html><head><base href="https://universalradio.world/search">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal Radio World Search</title>
+<style>
+  body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+  }
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+  }
+  h1 {
+    margin: 0;
+    font-size: 2.5em;
+  }
+  #search-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+  }
+  #search-input {
+    width: 70%;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 4px 0 0 4px;
+  }
+  #search-button {
+    padding: 12px 24px;
+    font-size: 16px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  #search-button:hover {
+    background-color: #2980b9;
+  }
+  #results-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  .station-card {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .station-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+  }
+  .station-card h3 {
+    margin-top: 0;
+    color: #2c3e50;
+  }
+  .play-button {
+    width: 100%;
+    padding: 10px;
+    background-color: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  .play-button:hover {
+    background-color: #27ae60;
+  }
+  #player {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: #34495e;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  }
+  #audio-player {
+    width: 100%;
+    max-width: 500px;
+  }
+  .loader {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Universal Radio World</h1>
+  </header>
+  <div class="container">
+    <div id="search-container">
+      <input type="text" id="search-input" placeholder="Search for radio stations by name, country, or language...">
+      <button id="search-button">Search</button>
+    </div>
+    <div id="results-container"></div>
+  </div>
+  <div id="player" style="display: none;">
+    <audio id="audio-player" controls></audio>
+    <p id="now-playing"></p>
+  </div>
+
+<script>
+const searchInput = document.getElementById('search-input');
+const searchButton = document.getElementById('search-button');
+const resultsContainer = document.getElementById('results-container');
+const audioPlayer = document.getElementById('audio-player');
+const player = document.getElementById('player');
+const nowPlaying = document.getElementById('now-playing');
+
+searchButton.addEventListener('click', performSearch);
+searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') performSearch();
+});
+
+function performSearch() {
+  const query = searchInput.value.trim();
+  if (query) {
+    resultsContainer.innerHTML = '<div class="loader"></div>';
+    fetch(`https://de1.api.radio-browser.info/json/stations/search?name=${encodeURIComponent(query)}&limit=20`)
+      .then(response => response.json())
+      .then(data => displayResults(data))
+      .catch(error => {
+        console.error('Error:', error);
+        resultsContainer.innerHTML = '<p>Error fetching radio stations. Please try again.</p>';
+      });
+  }
+}
+
+function displayResults(stations) {
+  resultsContainer.innerHTML = '';
+  if (stations.length === 0) {
+    resultsContainer.innerHTML = '<p>No stations found. Try a different search.</p>';
+    return;
+  }
+  
+  stations.forEach(station => {
+    const stationCard = document.createElement('div');
+    stationCard.className = 'station-card';
+    stationCard.innerHTML = `
+      <h3>${station.name}</h3>
+      <p><strong>Country:</strong> ${station.country}</p>
+      <p><strong>Language:</strong> ${station.language || 'Not specified'}</p>
+      <button class="play-button" data-url="${station.url_resolved}">Play</button>
+    `;
+    resultsContainer.appendChild(stationCard);
+
+    const playButton = stationCard.querySelector('.play-button');
+    playButton.addEventListener('click', () => playStation(station));
+  });
+}
+
+function playStation(station) {
+  audioPlayer.src = station.url_resolved;
+  audioPlayer.play();
+  player.style.display = 'block';
+  nowPlaying.textContent = `Now playing: ${station.name} (${station.country})`;
+}
+
+// Error handling
+audioPlayer.addEventListener('error', () => {
+  alert('Error playing this station. Please try another one.');
+});
+
+// Stop playback when search input is focused
+searchInput.addEventListener('focus', () => {
+  audioPlayer.pause();
+  player.style.display = 'none';
+});
+
+// Responsive design for mobile devices
+function adjustLayoutForMobile() {
+  if (window.innerWidth <= 600) {
+    document.querySelector('.container').style.padding = '10px';
+    searchInput.style.width = '60%';
+    searchButton.style.width = '40%';
+  } else {
+    document.querySelector('.container').style.padding = '20px';
+    searchInput.style.width = '70%';
+    searchButton.style.width = 'auto';
+  }
+}
+
+window.addEventListener('resize', adjustLayoutForMobile);
+adjustLayoutForMobile();
+
+// Add some popular radio stations on page load
+function loadPopularStations() {
+  fetch('https://de1.api.radio-browser.info/json/stations/topclick/8')
+    .then(response => response.json())
+    .then(data => displayResults(data))
+    .catch(error => {
+      console.error('Error:', error);
+      resultsContainer.innerHTML = '<p>Error loading popular stations. Please try a search.</p>';
+    });
+}
+
+// Call this function when the page loads
+window.addEventListener('load', loadPopularStations);
+</script>
+</body>
+</html>

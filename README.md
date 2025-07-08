@@ -36,7 +36,5 @@ La web original es una demostración funcional que permite explorar estaciones d
 ## 🛠️ Instalación local
 
 ```bash
-git clone https://github.com/tu-usuario/radio-universal.git
-cd radio-universal
-npm install
-npm run dev
+git clone https://github.com/EduardoArismendy/RadioUniversal.git
+
